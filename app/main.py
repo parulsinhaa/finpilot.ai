@@ -37,7 +37,7 @@ def load_css(theme: str = "pastel"):
 
 
 DEFAULTS = {
-    "logged_in": False, "user": None, "env": None, "current_state": None,
+    "logged_in": True, "user": None, "env": None, "current_state": None,
     "history": [], "chat_messages": [], "notifications": [],
     "theme": "pastel", "accent": "rose", "currency": "INR", "language": "English",
     "task": "wealth_building", "current_page": "landing", "plan": "free",
