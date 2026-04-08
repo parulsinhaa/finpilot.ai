@@ -1,0 +1,108 @@
+name: finpilot-ai
+version: "1.0.0"
+description: >
+  FinPilot AI is a production-grade financial simulation environment where an
+  AI agent manages a person's complete financial life month-by-month —
+  income, expenses, savings, debt, investments, life events, and inflation.
+  The agent must make explainable decisions to maximise financial health.
+
+author: "FinPilot AI Team"
+license: "MIT"
+
+environment:
+  type: sequential
+  step_unit: month
+  max_steps: 60
+  timeout_minutes: 20
+  resources:
+    vcpu: 2
+    ram_gb: 8
+
+state_space:
+  month:            {type: int,   range: [1, 60]}
+  income:           {type: float, range: [0, 1000000]}
+  expenses:         {type: dict}
+  savings:          {type: float, range: [0, 10000000]}
+  debt:             {type: float, range: [0, 5000000]}
+  investments:      {type: float, range: [0, 10000000]}
+  net_worth:        {type: float, range: [-5000000, 50000000]}
+  health_score:     {type: int,   range: [0, 100]}
+  emergency_fund:   {type: float, range: [0, 2000000]}
+  inflation_rate:   {type: float, range: [0.0, 0.15]}
+  life_event:       {type: str,   values: [none, medical_emergency, salary_increase, job_loss, market_crash, windfall]}
+  streak_days:      {type: int,   range: [0, 365]}
+  currency:         {type: str,   values: [INR, USD, EUR, GBP, AED]}
+
+action_space:
+  - name: save
+    description: Transfer a portion of surplus to savings
+    params: {amount: float}
+  - name: invest_sip
+    description: Start or increase a SIP investment
+    params: {amount: float, fund_type: str}
+  - name: repay_debt
+    description: Make an extra debt repayment beyond minimum
+    params: {amount: float}
+  - name: adjust_expenses
+    description: Modify an expense category
+    params: {category: str, new_amount: float}
+  - name: build_emergency_fund
+    description: Contribute to emergency fund
+    params: {amount: float}
+  - name: withdraw_investment
+    description: Withdraw from investments (penalised if early)
+    params: {amount: float}
+  - name: take_loan
+    description: Take a new loan (increases debt)
+    params: {amount: float, interest_rate: float}
+
+tasks:
+  - name: budget_balance
+    difficulty: easy
+    description: >
+      Achieve a positive monthly cash flow and maintain savings rate ≥ 20%
+      for 6 consecutive months.
+    success_criteria:
+      savings_rate_min: 0.20
+      consecutive_months: 6
+      net_worth_change: positive
+    reward_function: graders.budget_balance_reward
+    max_steps: 12
+
+  - name: debt_payoff
+    difficulty: medium
+    description: >
+      Pay off all high-interest debt (>10% APR) within 24 months while
+      maintaining a minimum savings rate of 15%.
+    success_criteria:
+      high_interest_debt_remaining: 0
+      savings_rate_min: 0.15
+      months_limit: 24
+    reward_function: graders.debt_payoff_reward
+    max_steps: 24
+
+  - name: wealth_building
+    difficulty: hard
+    description: >
+      Grow net worth by 3x the starting value within 36 months while
+      managing life events, inflation, and maintaining health score ≥ 70.
+    success_criteria:
+      net_worth_multiplier: 3.0
+      health_score_min: 70
+      months_limit: 36
+    reward_function: graders.wealth_building_reward
+    max_steps: 36
+
+graders:
+  reward_range: [0.0, 1.0]
+  normalization: min_max
+
+logging:
+  format: openenv_v1
+  markers: ["[START]", "[STEP]", "[END]"]
+  include_reasoning: true
+
+deployment:
+  platform: huggingface_spaces
+  port: 7860
+  dockerfile: Dockerfile
